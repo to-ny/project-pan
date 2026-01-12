@@ -1,0 +1,63 @@
+.inventory-screen {
+  padding-bottom: 100px;
+}
+
+.inventory-card {
+  display: flex;
+  background: var(--bg-card);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px var(--shadow-color);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin-bottom: 12px;
+}
+
+.inventory-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.inventory-card .category-bar {
+  width: 4px;
+  min-height: 100%;
+}
+
+.inventory-info {
+  flex: 1;
+  padding: 16px;
+  min-width: 0;
+}
+
+.inventory-header {
+  margin-bottom: 8px;
+}
+
+.inventory-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.meta-item {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.start-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent-coral);
+  transition: all 0.2s ease;
+}
+
+.start-button:hover {
+  background: var(--accent-coral);
+  color: white;
+}

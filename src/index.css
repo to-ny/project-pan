@@ -1,0 +1,147 @@
+:root {
+  /* Background colors */
+  --bg-primary: #FFF8F6;
+  --bg-secondary: #FFF0ED;
+  --bg-card: #FFFFFF;
+  --bg-input: #F5F0EE;
+
+  /* Text colors */
+  --text-primary: #2D2A32;
+  --text-secondary: #6B6570;
+  --text-muted: #9B969F;
+
+  /* Accent colors */
+  --accent-coral: #E8735A;
+  --accent-rose: #D4848C;
+  --accent-teal: #5BA3A0;
+  --accent-gold: #D4A65A;
+
+  /* UI colors */
+  --border-color: #E8E4E2;
+  --shadow-color: rgba(45, 42, 50, 0.08);
+
+  /* Category colors */
+  --cat-red: #E57373;
+  --cat-pink: #F06292;
+  --cat-purple: #BA68C8;
+  --cat-blue: #64B5F6;
+  --cat-teal: #4DB6AC;
+  --cat-green: #81C784;
+  --cat-yellow: #FFD54F;
+  --cat-orange: #FFB74D;
+  --cat-brown: #A1887F;
+  --cat-grey: #90A4AE;
+
+  /* Spacing */
+  --nav-height: 60px;
+  --header-height: 56px;
+  --fab-size: 56px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 2px;
+}
+
+/* Animation keyframes */
+@keyframes checkmark {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.3s ease-out;
+}
