@@ -7,12 +7,19 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "hash-pin": "node scripts/hash-pin.js"
   },
   "dependencies": {
+    "@vercel/blob": "^0.27.0",
+    "@vercel/postgres": "^0.10.0",
+    "bcryptjs": "^2.4.3",
     "canvas-confetti": "^1.9.4",
     "date-fns": "^4.1.0",
-    "idb": "^8.0.3",
+    "drizzle-orm": "^0.38.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
@@ -21,6 +28,7 @@
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "drizzle-kit": "^0.30.0",
     "eslint": "^9.39.2",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
