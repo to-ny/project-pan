@@ -2,23 +2,17 @@ import { db, sql } from '../_db.js';
 import { categories, products, usageLogs } from '../../src/data/schema.js';
 import { withAuth } from '../_auth.js';
 
-async function handler(request) {
-  if (request.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Méthode non autorisée' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    });
+async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Méthode non autorisée' });
   }
 
   try {
-    const backup = await request.json();
+    const backup = req.body;
 
     // Validate backup structure
-    if (!backup.version || !backup.data) {
-      return new Response(JSON.stringify({ error: 'Format de sauvegarde invalide' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    if (!backup || !backup.version || !backup.data) {
+      return res.status(400).json({ error: 'Format de sauvegarde invalide' });
     }
 
     const { data } = backup;
@@ -84,23 +78,17 @@ async function handler(request) {
       await sql`SELECT setval('usage_logs_id_seq', ${maxLogId}, true)`;
     }
 
-    return new Response(JSON.stringify({
+    return res.status(200).json({
       success: true,
       restored: {
         categories: data.categories?.length || 0,
         products: data.products?.length || 0,
         usageLogs: data.usageLogs?.length || 0,
       },
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('Restore error:', error);
-    return new Response(JSON.stringify({ error: 'Erreur lors de la restauration' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(500).json({ error: 'Erreur lors de la restauration' });
   }
 }
 

@@ -6,51 +6,28 @@ import {
   createAuthCookie,
 } from '../_auth.js';
 
-export default async function handler(request) {
-  if (request.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Méthode non autorisée' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    });
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Méthode non autorisée' });
   }
 
-  const ip = getClientIP(request);
+  const ip = getClientIP(req);
 
   // Check rate limit
   const allowed = await checkRateLimit(ip);
   if (!allowed) {
-    return new Response(
-      JSON.stringify({
-        error: 'Trop de tentatives. Réessayez dans 15 minutes.',
-        rateLimited: true,
-      }),
-      {
-        status: 429,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
-  }
-
-  // Parse body
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return new Response(JSON.stringify({ error: 'Corps de requête invalide' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
+    return res.status(429).json({
+      error: 'Trop de tentatives. Réessayez dans 15 minutes.',
+      rateLimited: true,
     });
   }
 
-  const { pin } = body;
+  const { pin } = req.body || {};
 
   // Validate input
   if (!pin || typeof pin !== 'string' || pin.length < 4 || pin.length > 8) {
     await recordAttempt(ip);
-    return new Response(JSON.stringify({ error: 'Code PIN invalide' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(400).json({ error: 'Code PIN invalide' });
   }
 
   // Verify PIN
@@ -59,10 +36,7 @@ export default async function handler(request) {
 
     if (!valid) {
       await recordAttempt(ip);
-      return new Response(JSON.stringify({ error: 'Code PIN incorrect' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return res.status(401).json({ error: 'Code PIN incorrect' });
     }
 
     // Success - set auth cookie with the pre-generated token
@@ -71,18 +45,10 @@ export default async function handler(request) {
       throw new Error('AUTH_TOKEN not configured');
     }
 
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Set-Cookie': createAuthCookie(token),
-      },
-    });
+    res.setHeader('Set-Cookie', createAuthCookie(token));
+    return res.status(200).json({ success: true });
   } catch (error) {
     console.error('Auth error:', error);
-    return new Response(JSON.stringify({ error: 'Erreur serveur' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(500).json({ error: 'Erreur serveur' });
   }
 }

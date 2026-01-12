@@ -3,32 +3,22 @@ import { products } from '../../src/data/schema.js';
 import { eq } from 'drizzle-orm';
 import { withAuth } from '../_auth.js';
 
-async function handler(request) {
-  if (request.method !== 'PUT') {
-    return new Response(JSON.stringify({ error: 'Méthode non autorisée' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    });
+async function handler(req, res) {
+  if (req.method !== 'PUT') {
+    return res.status(405).json({ error: 'Méthode non autorisée' });
   }
 
-  const url = new URL(request.url);
-  const id = url.searchParams.get('id');
+  const id = req.query.id;
 
   if (!id) {
-    return new Response(JSON.stringify({ error: 'ID requis' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(400).json({ error: 'ID requis' });
   }
 
-  const body = await request.json();
+  const body = req.body || {};
   const { status, rating, review } = body;
 
   if (!['in_stock', 'in_use', 'finished'].includes(status)) {
-    return new Response(JSON.stringify({ error: 'Statut invalide' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(400).json({ error: 'Statut invalide' });
   }
 
   const updates = { status };
@@ -48,16 +38,10 @@ async function handler(request) {
     .returning();
 
   if (result.length === 0) {
-    return new Response(JSON.stringify({ error: 'Produit non trouvé' }), {
-      status: 404,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(404).json({ error: 'Produit non trouvé' });
   }
 
-  return new Response(JSON.stringify(result[0]), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  });
+  return res.status(200).json(result[0]);
 }
 
 export default withAuth(handler);

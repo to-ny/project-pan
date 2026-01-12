@@ -1,17 +1,10 @@
 import { validateToken } from '../_auth.js';
 
-export default async function handler(request) {
-  if (request.method !== 'GET') {
-    return new Response(JSON.stringify({ error: 'Méthode non autorisée' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    });
+export default async function handler(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Méthode non autorisée' });
   }
 
-  const authenticated = validateToken(request);
-
-  return new Response(JSON.stringify({ authenticated }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  });
+  const authenticated = validateToken(req);
+  return res.status(200).json({ authenticated });
 }

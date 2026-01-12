@@ -3,36 +3,26 @@ import { categories, CATEGORY_COLORS } from '../../src/data/schema.js';
 import { eq } from 'drizzle-orm';
 import { withAuth } from '../_auth.js';
 
-async function handler(request) {
-  const url = new URL(request.url);
-  const id = url.searchParams.get('id');
+async function handler(req, res) {
+  const id = req.query.id;
 
   // GET - List all or get by ID
-  if (request.method === 'GET') {
+  if (req.method === 'GET') {
     if (id) {
       const result = await db.select().from(categories).where(eq(categories.id, parseInt(id)));
       if (result.length === 0) {
-        return new Response(JSON.stringify({ error: 'Catégorie non trouvée' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' },
-        });
+        return res.status(404).json({ error: 'Catégorie non trouvée' });
       }
-      return new Response(JSON.stringify(result[0]), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return res.status(200).json(result[0]);
     }
 
     const result = await db.select().from(categories);
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(200).json(result);
   }
 
   // POST - Create new category
-  if (request.method === 'POST') {
-    const body = await request.json();
+  if (req.method === 'POST') {
+    const body = req.body || {};
     const allCategories = await db.select().from(categories);
     const color = body.color || CATEGORY_COLORS[allCategories.length % CATEGORY_COLORS.length];
 
@@ -42,22 +32,16 @@ async function handler(request) {
       subcategories: body.subcategories || [],
     }).returning();
 
-    return new Response(JSON.stringify(result[0]), {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(201).json(result[0]);
   }
 
   // PUT - Update category
-  if (request.method === 'PUT') {
+  if (req.method === 'PUT') {
     if (!id) {
-      return new Response(JSON.stringify({ error: 'ID requis' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return res.status(400).json({ error: 'ID requis' });
     }
 
-    const body = await request.json();
+    const body = req.body || {};
     const result = await db
       .update(categories)
       .set(body)
@@ -65,39 +49,23 @@ async function handler(request) {
       .returning();
 
     if (result.length === 0) {
-      return new Response(JSON.stringify({ error: 'Catégorie non trouvée' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return res.status(404).json({ error: 'Catégorie non trouvée' });
     }
 
-    return new Response(JSON.stringify(result[0]), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(200).json(result[0]);
   }
 
   // DELETE - Delete category (cascade handled by DB)
-  if (request.method === 'DELETE') {
+  if (req.method === 'DELETE') {
     if (!id) {
-      return new Response(JSON.stringify({ error: 'ID requis' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return res.status(400).json({ error: 'ID requis' });
     }
 
     await db.delete(categories).where(eq(categories.id, parseInt(id)));
-
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(200).json({ success: true });
   }
 
-  return new Response(JSON.stringify({ error: 'Méthode non autorisée' }), {
-    status: 405,
-    headers: { 'Content-Type': 'application/json' },
-  });
+  return res.status(405).json({ error: 'Méthode non autorisée' });
 }
 
 export default withAuth(handler);

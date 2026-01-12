@@ -9,13 +9,13 @@ const WINDOW_MINUTES = 15;
 const TOKEN_COOKIE_NAME = 'pan_auth';
 const TOKEN_MAX_AGE = 365 * 24 * 60 * 60; // 1 year in seconds
 
-// Get client IP from request
-export function getClientIP(request) {
-  const forwarded = request.headers.get('x-forwarded-for');
+// Get client IP from request (Node.js format)
+export function getClientIP(req) {
+  const forwarded = req.headers['x-forwarded-for'];
   if (forwarded) {
     return forwarded.split(',')[0].trim();
   }
-  return request.headers.get('x-real-ip') || 'unknown';
+  return req.headers['x-real-ip'] || req.socket?.remoteAddress || 'unknown';
 }
 
 // Check rate limit
@@ -68,9 +68,9 @@ export function createAuthCookie(token) {
   return `${TOKEN_COOKIE_NAME}=${token}; HttpOnly; ${secure}SameSite=Strict; Path=/; Max-Age=${TOKEN_MAX_AGE}`;
 }
 
-// Parse cookies from request
-export function parseCookies(request) {
-  const cookieHeader = request.headers.get('cookie') || '';
+// Parse cookies from request (Node.js format)
+export function parseCookies(req) {
+  const cookieHeader = req.headers.cookie || '';
   const cookies = {};
   cookieHeader.split(';').forEach(cookie => {
     const [name, ...rest] = cookie.trim().split('=');
@@ -81,9 +81,9 @@ export function parseCookies(request) {
   return cookies;
 }
 
-// Validate auth token
-export function validateToken(request) {
-  const cookies = parseCookies(request);
+// Validate auth token (Node.js format)
+export function validateToken(req) {
+  const cookies = parseCookies(req);
   const token = cookies[TOKEN_COOKIE_NAME];
   const validToken = process.env.AUTH_TOKEN;
 
@@ -102,15 +102,12 @@ export function validateToken(request) {
   }
 }
 
-// Auth middleware wrapper for API routes
+// Auth middleware wrapper for API routes (Node.js format)
 export function withAuth(handler) {
-  return async (request) => {
-    if (!validateToken(request)) {
-      return new Response(JSON.stringify({ error: 'Non autorisé' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
+  return async (req, res) => {
+    if (!validateToken(req)) {
+      return res.status(401).json({ error: 'Non autorisé' });
     }
-    return handler(request);
+    return handler(req, res);
   };
 }

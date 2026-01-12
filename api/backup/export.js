@@ -2,12 +2,9 @@ import { db } from '../_db.js';
 import { categories, products, usageLogs } from '../../src/data/schema.js';
 import { withAuth } from '../_auth.js';
 
-async function handler(request) {
-  if (request.method !== 'GET') {
-    return new Response(JSON.stringify({ error: 'Méthode non autorisée' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    });
+async function handler(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Méthode non autorisée' });
   }
 
   try {
@@ -26,19 +23,12 @@ async function handler(request) {
       },
     };
 
-    return new Response(JSON.stringify(backup, null, 2), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Disposition': `attachment; filename="projectpan-backup-${new Date().toISOString().split('T')[0]}.json"`,
-      },
-    });
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="projectpan-backup-${new Date().toISOString().split('T')[0]}.json"`);
+    return res.status(200).send(JSON.stringify(backup, null, 2));
   } catch (error) {
     console.error('Export error:', error);
-    return new Response(JSON.stringify({ error: 'Erreur lors de l\'export' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(500).json({ error: 'Erreur lors de l\'export' });
   }
 }
 

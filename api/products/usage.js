@@ -3,21 +3,17 @@ import { products, usageLogs } from '../../src/data/schema.js';
 import { eq } from 'drizzle-orm';
 import { withAuth } from '../_auth.js';
 
-async function handler(request) {
-  const url = new URL(request.url);
-  const productId = url.searchParams.get('productId');
+async function handler(req, res) {
+  const productId = req.query.productId;
 
   if (!productId) {
-    return new Response(JSON.stringify({ error: 'productId requis' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(400).json({ error: 'productId requis' });
   }
 
   const id = parseInt(productId);
 
   // GET - Get usage logs and stats
-  if (request.method === 'GET') {
+  if (req.method === 'GET') {
     const logs = await db
       .select()
       .from(usageLogs)
@@ -58,7 +54,7 @@ async function handler(request) {
       monthlyData[key].days = Array.from(monthlyData[key].days);
     }
 
-    return new Response(JSON.stringify({
+    return res.status(200).json({
       logs,
       stats: {
         weekCount,
@@ -67,14 +63,11 @@ async function handler(request) {
       },
       currentMonthDays: Array.from(currentMonthDays),
       monthlyData,
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
     });
   }
 
   // POST - Log usage
-  if (request.method === 'POST') {
+  if (req.method === 'POST') {
     const now = new Date();
 
     await db.insert(usageLogs).values({
@@ -88,16 +81,10 @@ async function handler(request) {
       .set({ lastUsed: now })
       .where(eq(products.id, id));
 
-    return new Response(JSON.stringify({ success: true }), {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(201).json({ success: true });
   }
 
-  return new Response(JSON.stringify({ error: 'Méthode non autorisée' }), {
-    status: 405,
-    headers: { 'Content-Type': 'application/json' },
-  });
+  return res.status(405).json({ error: 'Méthode non autorisée' });
 }
 
 export default withAuth(handler);

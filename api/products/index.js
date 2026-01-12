@@ -3,26 +3,19 @@ import { products } from '../../src/data/schema.js';
 import { eq } from 'drizzle-orm';
 import { withAuth } from '../_auth.js';
 
-async function handler(request) {
-  const url = new URL(request.url);
-  const id = url.searchParams.get('id');
-  const status = url.searchParams.get('status');
-  const categoryId = url.searchParams.get('categoryId');
+async function handler(req, res) {
+  const id = req.query.id;
+  const status = req.query.status;
+  const categoryId = req.query.categoryId;
 
   // GET - List all, by status, by category, or by ID
-  if (request.method === 'GET') {
+  if (req.method === 'GET') {
     if (id) {
       const result = await db.select().from(products).where(eq(products.id, parseInt(id)));
       if (result.length === 0) {
-        return new Response(JSON.stringify({ error: 'Produit non trouvé' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' },
-        });
+        return res.status(404).json({ error: 'Produit non trouvé' });
       }
-      return new Response(JSON.stringify(result[0]), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return res.status(200).json(result[0]);
     }
 
     let result;
@@ -34,15 +27,12 @@ async function handler(request) {
       result = await db.select().from(products);
     }
 
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(200).json(result);
   }
 
   // POST - Create new product
-  if (request.method === 'POST') {
-    const body = await request.json();
+  if (req.method === 'POST') {
+    const body = req.body || {};
 
     const result = await db.insert(products).values({
       name: body.name,
@@ -56,22 +46,16 @@ async function handler(request) {
       dateOpened: body.dateOpened ? new Date(body.dateOpened) : null,
     }).returning();
 
-    return new Response(JSON.stringify(result[0]), {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(201).json(result[0]);
   }
 
   // PUT - Update product
-  if (request.method === 'PUT') {
+  if (req.method === 'PUT') {
     if (!id) {
-      return new Response(JSON.stringify({ error: 'ID requis' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return res.status(400).json({ error: 'ID requis' });
     }
 
-    const body = await request.json();
+    const body = req.body || {};
 
     // Convert date strings to Date objects
     const updates = { ...body };
@@ -87,39 +71,23 @@ async function handler(request) {
       .returning();
 
     if (result.length === 0) {
-      return new Response(JSON.stringify({ error: 'Produit non trouvé' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return res.status(404).json({ error: 'Produit non trouvé' });
     }
 
-    return new Response(JSON.stringify(result[0]), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(200).json(result[0]);
   }
 
   // DELETE - Delete product (cascade handled by DB for usage logs)
-  if (request.method === 'DELETE') {
+  if (req.method === 'DELETE') {
     if (!id) {
-      return new Response(JSON.stringify({ error: 'ID requis' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return res.status(400).json({ error: 'ID requis' });
     }
 
     await db.delete(products).where(eq(products.id, parseInt(id)));
-
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(200).json({ success: true });
   }
 
-  return new Response(JSON.stringify({ error: 'Méthode non autorisée' }), {
-    status: 405,
-    headers: { 'Content-Type': 'application/json' },
-  });
+  return res.status(405).json({ error: 'Méthode non autorisée' });
 }
 
 export default withAuth(handler);
