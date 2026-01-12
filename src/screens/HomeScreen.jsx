@@ -46,7 +46,7 @@ function HomeScreen({ onProductClick, onRefresh }) {
     await addUsageLog(productId);
     setAnimatingId(productId);
     setTimeout(() => setAnimatingId(null), 600);
-    loadData();
+    await loadData();
     onRefresh?.();
   }, [loadData, onRefresh]);
 

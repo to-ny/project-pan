@@ -205,18 +205,21 @@ export async function moveProductToFinished(id, rating = null, review = null) {
 // Usage log operations
 export async function getUsageLogs(productId) {
   const db = await getDB();
-  return db.getAllFromIndex('usageLogs', 'productId', productId);
+  const id = Number(productId);
+  const logs = await db.getAllFromIndex('usageLogs', 'productId', id);
+  return logs.filter(log => log.productId === id);
 }
 
 export async function addUsageLog(productId) {
   const db = await getDB();
+  const id = Number(productId);
   const now = new Date();
   await db.add('usageLogs', {
-    productId,
+    productId: id,
     date: now.toISOString(),
   });
   // Update product's lastUsed
-  await updateProduct(productId, { lastUsed: now.toISOString() });
+  await updateProduct(id, { lastUsed: now.toISOString() });
   return true;
 }
 
