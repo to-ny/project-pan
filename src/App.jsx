@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getDB } from './data/db';
-import { seedTestData } from './data/seedData';
+import { checkAuth } from './data/db';
 import Header from './components/Header';
 import BottomNav from './components/BottomNav';
 import FloatingActionButton from './components/FloatingActionButton';
+import PinScreen from './components/PinScreen';
 import HomeScreen from './screens/HomeScreen';
 import InventoryScreen from './screens/InventoryScreen';
 import FinishedScreen from './screens/FinishedScreen';
@@ -17,15 +17,18 @@ function App() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [dbReady, setDbReady] = useState(false);
+  const [authState, setAuthState] = useState('checking'); // 'checking', 'authenticated', 'unauthenticated'
 
   useEffect(() => {
     async function init() {
-      await getDB();
-      await seedTestData();
-      setDbReady(true);
+      const authenticated = await checkAuth();
+      setAuthState(authenticated ? 'authenticated' : 'unauthenticated');
     }
     init();
+  }, []);
+
+  const handleAuthSuccess = useCallback(() => {
+    setAuthState('authenticated');
   }, []);
 
   const refresh = useCallback(() => {
@@ -70,9 +73,8 @@ function App() {
     refresh();
   }, [refresh]);
 
-  const showFAB = ['home', 'inventory'].includes(currentScreen);
-
-  if (!dbReady) {
+  // Show loading while checking auth
+  if (authState === 'checking') {
     return (
       <div className="app-loading">
         <div className="loading-spinner"></div>
@@ -80,6 +82,13 @@ function App() {
       </div>
     );
   }
+
+  // Show PIN screen if not authenticated
+  if (authState === 'unauthenticated') {
+    return <PinScreen onSuccess={handleAuthSuccess} />;
+  }
+
+  const showFAB = ['home', 'inventory'].includes(currentScreen);
 
   const renderScreen = () => {
     switch (currentScreen) {

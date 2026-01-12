@@ -1,9 +1,33 @@
-import { openDB } from 'idb';
+// Client-side data layer using fetch to API routes
+// Replaces IndexedDB with Vercel Postgres via API
 
-const DB_NAME = 'projectpan';
-const DB_VERSION = 1;
+const API_BASE = '/api';
 
-const CATEGORY_COLORS = [
+// Helper for API calls
+async function api(endpoint, options = {}) {
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+    credentials: 'include', // Include auth cookies
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Erreur réseau' }));
+    if (response.status === 401) {
+      // Redirect to auth on 401
+      window.location.reload();
+    }
+    throw new Error(error.error || `HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
+
+// Category colors (kept for client-side use)
+export const CATEGORY_COLORS = [
   '#E57373', // Rouge doux
   '#F06292', // Rose
   '#BA68C8', // Violet
@@ -16,272 +40,151 @@ const CATEGORY_COLORS = [
   '#90A4AE', // Gris-bleu
 ];
 
-const DEFAULT_CATEGORIES = [
-  {
-    name: 'Soin visage',
-    subcategories: ['Nettoyant', 'Tonique', 'Sérum', 'Crème hydratante', 'Contour des yeux', 'Masque', 'Protection solaire', 'Huile', 'Exfoliant'],
-  },
-  {
-    name: 'Maquillage',
-    subcategories: ['Fond de teint', 'Correcteur', 'Poudre', 'Blush', 'Bronzer', 'Highlighter', 'Fard à paupières', 'Eyeliner', 'Mascara', 'Rouge à lèvres', 'Gloss', 'Spray fixateur'],
-  },
-  {
-    name: 'Cheveux',
-    subcategories: ['Shampooing', 'Après-shampooing', 'Masque', 'Huile', 'Coiffant', 'Soin'],
-  },
-  {
-    name: 'Corps',
-    subcategories: ['Gel douche', 'Lait corporel', 'Gommage', 'Huile', 'Déodorant', 'Crème mains'],
-  },
-  {
-    name: 'Parfum',
-    subcategories: ['Parfum', 'Brume corporelle'],
-  },
-  {
-    name: 'Ongles',
-    subcategories: ['Vernis', 'Soin', 'Dissolvant'],
-  },
-];
-
+// No-op init functions for compatibility
 export async function initDB() {
-  const db = await openDB(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      // Categories store
-      if (!db.objectStoreNames.contains('categories')) {
-        const categoryStore = db.createObjectStore('categories', { keyPath: 'id', autoIncrement: true });
-        categoryStore.createIndex('name', 'name');
-      }
-
-      // Products store
-      if (!db.objectStoreNames.contains('products')) {
-        const productStore = db.createObjectStore('products', { keyPath: 'id', autoIncrement: true });
-        productStore.createIndex('categoryId', 'categoryId');
-        productStore.createIndex('status', 'status');
-        productStore.createIndex('createdAt', 'createdAt');
-      }
-
-      // Usage logs store
-      if (!db.objectStoreNames.contains('usageLogs')) {
-        const usageStore = db.createObjectStore('usageLogs', { keyPath: 'id', autoIncrement: true });
-        usageStore.createIndex('productId', 'productId');
-        usageStore.createIndex('date', 'date');
-      }
-    },
-  });
-
-  // Initialize default categories if empty
-  const categoryCount = await db.count('categories');
-  if (categoryCount === 0) {
-    for (let i = 0; i < DEFAULT_CATEGORIES.length; i++) {
-      const cat = DEFAULT_CATEGORIES[i];
-      await db.add('categories', {
-        name: cat.name,
-        color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
-        subcategories: cat.subcategories,
-        createdAt: new Date().toISOString(),
-      });
-    }
-  }
-
-  return db;
+  return true;
 }
 
-let dbPromise = null;
-
-export function getDB() {
-  if (!dbPromise) {
-    dbPromise = initDB();
-  }
-  return dbPromise;
+export async function getDB() {
+  return true;
 }
 
 // Category operations
 export async function getCategories() {
-  const db = await getDB();
-  return db.getAll('categories');
+  return api('/categories');
 }
 
 export async function getCategory(id) {
-  const db = await getDB();
-  return db.get('categories', id);
+  return api(`/categories?id=${id}`);
 }
 
 export async function addCategory(category) {
-  const db = await getDB();
-  const categories = await getCategories();
-  const color = CATEGORY_COLORS[categories.length % CATEGORY_COLORS.length];
-  return db.add('categories', {
-    ...category,
-    color: category.color || color,
-    subcategories: category.subcategories || [],
-    createdAt: new Date().toISOString(),
+  const result = await api('/categories', {
+    method: 'POST',
+    body: JSON.stringify(category),
   });
+  return result.id;
 }
 
 export async function updateCategory(id, updates) {
-  const db = await getDB();
-  const category = await db.get('categories', id);
-  if (!category) return null;
-  const updated = { ...category, ...updates };
-  await db.put('categories', updated);
-  return updated;
+  return api(`/categories?id=${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
 }
 
 export async function deleteCategory(id) {
-  const db = await getDB();
-  // Delete all products in this category
-  const products = await db.getAllFromIndex('products', 'categoryId', id);
-  for (const product of products) {
-    await deleteProduct(product.id);
-  }
-  return db.delete('categories', id);
+  return api(`/categories?id=${id}`, {
+    method: 'DELETE',
+  });
 }
 
 // Product operations
 export async function getProducts() {
-  const db = await getDB();
-  return db.getAll('products');
+  return api('/products');
 }
 
 export async function getProduct(id) {
-  const db = await getDB();
-  return db.get('products', id);
+  return api(`/products?id=${id}`);
 }
 
 export async function getProductsByStatus(status) {
-  const db = await getDB();
-  return db.getAllFromIndex('products', 'status', status);
+  return api(`/products?status=${status}`);
 }
 
 export async function getProductsByCategory(categoryId) {
-  const db = await getDB();
-  return db.getAllFromIndex('products', 'categoryId', categoryId);
+  return api(`/products?categoryId=${categoryId}`);
 }
 
 export async function addProduct(product) {
-  const db = await getDB();
-  return db.add('products', {
-    ...product,
-    createdAt: new Date().toISOString(),
-    lastUsed: null,
+  const result = await api('/products', {
+    method: 'POST',
+    body: JSON.stringify(product),
   });
+  return result.id;
 }
 
 export async function updateProduct(id, updates) {
-  const db = await getDB();
-  const product = await db.get('products', id);
-  if (!product) return null;
-  const updated = { ...product, ...updates };
-  await db.put('products', updated);
-  return updated;
+  return api(`/products?id=${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
 }
 
 export async function deleteProduct(id) {
-  const db = await getDB();
-  // Delete all usage logs for this product
-  const logs = await db.getAllFromIndex('usageLogs', 'productId', id);
-  for (const log of logs) {
-    await db.delete('usageLogs', log.id);
-  }
-  return db.delete('products', id);
+  return api(`/products?id=${id}`, {
+    method: 'DELETE',
+  });
 }
 
 export async function moveProductToInUse(id) {
-  return updateProduct(id, {
-    status: 'in_use',
-    dateOpened: new Date().toISOString(),
+  return api(`/products/status?id=${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ status: 'in_use' }),
   });
 }
 
 export async function moveProductToFinished(id, rating = null, review = null) {
-  return updateProduct(id, {
-    status: 'finished',
-    dateFinished: new Date().toISOString(),
-    rating,
-    review,
+  return api(`/products/status?id=${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ status: 'finished', rating, review }),
   });
 }
 
 // Usage log operations
 export async function getUsageLogs(productId) {
-  const db = await getDB();
-  const id = Number(productId);
-  const logs = await db.getAllFromIndex('usageLogs', 'productId', id);
-  return logs.filter(log => log.productId === id);
+  const data = await api(`/products/usage?productId=${productId}`);
+  return data.logs;
 }
 
 export async function addUsageLog(productId) {
-  const db = await getDB();
-  const id = Number(productId);
-  const now = new Date();
-  await db.add('usageLogs', {
-    productId: id,
-    date: now.toISOString(),
+  await api(`/products/usage?productId=${productId}`, {
+    method: 'POST',
   });
-  // Update product's lastUsed
-  await updateProduct(id, { lastUsed: now.toISOString() });
   return true;
 }
 
 export async function getUsageStats(productId) {
-  const logs = await getUsageLogs(productId);
-  const now = new Date();
-  const startOfWeek = new Date(now);
-  startOfWeek.setDate(now.getDate() - now.getDay());
-  startOfWeek.setHours(0, 0, 0, 0);
-
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-  let weekCount = 0;
-  let monthCount = 0;
-  const totalCount = logs.length;
-
-  for (const log of logs) {
-    const logDate = new Date(log.date);
-    if (logDate >= startOfWeek) weekCount++;
-    if (logDate >= startOfMonth) monthCount++;
-  }
-
-  return { weekCount, monthCount, totalCount };
+  const data = await api(`/products/usage?productId=${productId}`);
+  return data.stats;
 }
 
 export async function getMonthlyUsage(productId) {
-  const logs = await getUsageLogs(productId);
-  const monthlyData = {};
-
-  for (const log of logs) {
-    const date = new Date(log.date);
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    if (!monthlyData[key]) {
-      monthlyData[key] = { count: 0, days: new Set() };
-    }
-    monthlyData[key].count++;
-    monthlyData[key].days.add(date.getDate());
-  }
-
-  // Convert Sets to arrays
-  for (const key of Object.keys(monthlyData)) {
-    monthlyData[key].days = Array.from(monthlyData[key].days);
-  }
-
-  return monthlyData;
+  const data = await api(`/products/usage?productId=${productId}`);
+  return data.monthlyData;
 }
 
 export async function getCurrentMonthDays(productId) {
-  const logs = await getUsageLogs(productId);
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
-  const daysUsed = new Set();
-
-  for (const log of logs) {
-    const date = new Date(log.date);
-    if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
-      daysUsed.add(date.getDate());
-    }
-  }
-
-  return Array.from(daysUsed);
+  const data = await api(`/products/usage?productId=${productId}`);
+  return data.currentMonthDays;
 }
 
-export { CATEGORY_COLORS };
+// Auth operations
+export async function checkAuth() {
+  try {
+    const result = await fetch(`${API_BASE}/auth/check`, {
+      credentials: 'include',
+    });
+    const data = await result.json();
+    return data.authenticated;
+  } catch {
+    return false;
+  }
+}
+
+export async function verifyPin(pin) {
+  const response = await fetch(`${API_BASE}/auth/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pin }),
+    credentials: 'include',
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Erreur de vérification');
+  }
+
+  return data.success;
+}
